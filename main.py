@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from database import Base, engine
 from endpoints.materials import materials_router
-
+from fastapi.middleware.cors import CORSMiddleware
 # Ma'lumotlar bazasini yaratish
 Base.metadata.create_all(bind=engine)
 
@@ -21,4 +21,20 @@ app = FastAPI(
     },
 )
 # Routerlarni qo'shish
+
+
+origins = [
+    "http://127.0.0.1:5500",
+    "http://localhost:8000",
+    "https://backend-market.tmsiti.uz",  # Sizning veb-saytingiz yoki kerakli domenlar
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(materials_router)

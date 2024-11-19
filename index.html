@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Search</title>
+    <script>
+        async function fetchMaterials() {
+            const nameValue = document.getElementById('nameInput').value;
+            const codeValue = document.getElementById('codeInput').value;
+            let queryParams = [];
+
+            if (nameValue.length >= 4) {
+                queryParams.push(`name_value=${nameValue}`);
+            }
+            if (codeValue.length >= 4) {
+                queryParams.push(`code_value=${codeValue}`);
+            }
+
+            if (queryParams.length > 0) {
+                try {
+                    const response = await fetch(`http://127.0.0.1:8000/material/search/?${queryParams.join('&')}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        displayResults(data.materials);
+                    } else {
+                        console.error('Error fetching data:', response.statusText);
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                }
+            } else {
+                document.getElementById('results').innerHTML = '';
+            }
+        }
+
+        function displayResults(materials) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+            materials.forEach(material => {
+                const materialDiv = document.createElement('div');
+                materialDiv.className = 'material-item';
+                materialDiv.innerHTML = `
+                    <strong>Material Name:</strong> ${material.material_name}<br>
+                    <strong>Material CSR Code:</strong> ${material.material_csr_code}<br>
+                    <strong>Group Name:</strong> ${material.material_group_name}<br>
+                    <strong>Category Name:</strong> ${material.material_category_name}<br>
+                    <strong>Volume Name:</strong> ${material.material_volume_name}<br>
+                    <hr>
+                `;
+                resultsDiv.appendChild(materialDiv);
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Material Search</h1>
+    <input type="text" id="nameInput" placeholder="Enter material name..." onkeyup="fetchMaterials()">
+    <input type="text" id="codeInput" placeholder="Enter material code..." onkeyup="fetchMaterials()">
+    <div id="results"></div>
+</body>
+</html>
