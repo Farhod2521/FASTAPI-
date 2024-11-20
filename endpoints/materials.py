@@ -17,7 +17,54 @@ materials_router = APIRouter()
 from sqlalchemy import case
 from sqlalchemy import func
 
+@materials_router.get("/telegram_bot/search/", response_model=dict)
+async def material_name_csr_code_search(
+    name_value: Optional[str] = None,
+    code_value: Optional[str] = None,
+    page: int = 1,
+    limit: int = 24,
+    db: Session = Depends(get_db)
+):
+    query = (
+        db.query(
+            Materials,)
+    )
 
+    # Apply filters if the user has provided `name_value` or `code_value`
+    if name_value:
+        query = query.filter(Materials.material_name.ilike(f"%{name_value}%"))
+    
+    if code_value:
+        query = query.filter(Materials.material_csr_code.ilike(f"%{code_value}%"))
+
+    # Order results to prioritize matches that start with name_value
+    if name_value:
+        query = query.order_by(
+            case(
+                (Materials.material_name.ilike(f"{name_value}%"), 1),
+                else_=2
+            ),
+            Materials.material_name
+        )
+    else:
+        query = query.order_by(Materials.material_name)
+
+    # Pagination
+    offset = (page - 1) * limit
+    material_data = query.offset(offset).limit(limit).all()
+    count =  query.count()
+    result = {
+        "count": count,
+        "materials": [
+            {
+                "material_csr_code": mat.material_csr_code,
+                "material_name": mat.material_name,
+                "material_measure": mat.material_measure,
+            }
+            for mat in material_data
+        ]
+    }
+    return result
 
 @materials_router.get("/material/search/", response_model=dict)
 async def material_name_csr_code_search(
