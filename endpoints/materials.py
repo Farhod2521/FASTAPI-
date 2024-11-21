@@ -201,7 +201,7 @@ async def filter_materials(
 
 
 from math import ceil
-
+from sqlalchemy.orm import aliased
 # MaterialAds obyektlarini filterlash uchun API
 @materials_router.get("/materials/filter", response_model=dict)
 async def filter_materials(
@@ -209,15 +209,42 @@ async def filter_materials(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     date: Optional[datetime] = None,
+    name_value: Optional[str] = None,
+    code_value: Optional[str] = None,
     page: int = 1,  # Default to page 1
-    page_size: int = 12,  # Default to 10 items per page
+    page_size: int = 12,  # Default to 12 items per page
     db: Session = Depends(get_db)
 ):
-    if page < 1 or page_size < 1:
-        raise HTTPException(status_code=400, detail="Page and page size must be positive integers.")
+    # Alias for Materials to simplify queries
+    MaterialsAlias = aliased(Materials)
 
-    query = db.query(MaterialAds)
+    # Base query
+    query = (
+        db.query(MaterialAds)
+        .join(MaterialsAlias, MaterialsAlias.material_csr_code == MaterialAds.material_name_id)
+    )
 
+    # Filter by name_value on material_name in Materials
+    if name_value:
+        query = query.filter(MaterialsAlias.material_name.ilike(f"%{name_value}%"))
+
+    # Filter by code_value on material_csr_code in Materials
+    if code_value:
+        query = query.filter(MaterialsAlias.material_csr_code.ilike(f"%{code_value}%"))
+
+    # Ordering by name_value match priority
+    if name_value:
+        query = query.order_by(
+            case(
+                (MaterialsAlias.material_name.ilike(f"{name_value}%"), 1),
+                else_=2
+            ),
+            MaterialsAlias.material_name
+        )
+    else:
+        query = query.order_by(MaterialsAlias.material_name)
+
+    # Filter by other parameters
     if region_name:
         query = query.join(Regions).filter(Regions.region_name_uz == region_name)
     if date:
@@ -227,10 +254,11 @@ async def filter_materials(
     if max_price is not None:
         query = query.filter(MaterialAds.material_price <= max_price)
 
+    # Pagination logic
     total_items = query.count()  # Total number of records
     total_pages = ceil(total_items / page_size)
 
-    if page > total_pages and total_items > 0:
+    if page < 1 or page > total_pages:
         raise HTTPException(status_code=404, detail="Page out of range")
 
     # Apply pagination
@@ -239,6 +267,7 @@ async def filter_materials(
     if not materials:
         raise HTTPException(status_code=404, detail="No materials found for the given filters")
 
+    # Prepare response
     return {
         "count": len(materials),
         "total_items": total_items,
@@ -271,7 +300,6 @@ async def filter_materials(
             for material in materials
         ]
     }
-
 # MaterialAds obyektlarini olish (pagination qo'shildi)
 @materials_router.get("/materials/", response_model=List[MaterialAdsSchema])
 async def get_materials(page: int = 1, limit: int = 24, db: Session = Depends(get_db)):
