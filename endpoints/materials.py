@@ -71,7 +71,7 @@ async def material_name_csr_code_search(
     name_value: Optional[str] = None,
     code_value: Optional[str] = None,
     page: int = 1,
-    limit: int = 24,
+    limit: int = 12,
     db: Session = Depends(get_db)
 ):
     query = (
@@ -210,7 +210,7 @@ async def filter_materials(
     max_price: Optional[float] = None,
     date: Optional[datetime] = None,
     page: int = 1,  # Default to page 1
-    page_size: int = 24,  # Default to 10 items per page
+    page_size: int = 12,  # Default to 10 items per page
     db: Session = Depends(get_db)
 ):
     if page < 1 or page_size < 1:
