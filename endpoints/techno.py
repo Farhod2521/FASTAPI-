@@ -34,11 +34,21 @@ async def get_techno_groups(category_id: int, db: Session = Depends(get_db)):
 
 
 @techno_router.post("/techno_ads/", response_model=dict)
-async def get_techno_ads(group_ids: List[int], db: Session = Depends(get_db)):
+async def get_techno_ads(
+    group_ids: List[int],
+    page: int = 1,  # Default to page 1
+    page_size: int = 10,  # Default to 10 items per page
+    db: Session = Depends(get_db)
+):
+    if page < 1 or page_size < 1:
+        raise HTTPException(status_code=400, detail="Page and page size must be positive integers.")
+
+    # Query technos based on group_ids
     technos = db.query(Techno).filter(Techno.techno_group_id.in_(group_ids)).all()
     if not technos:
         raise HTTPException(status_code=404, detail="No technos found for the given groups")
 
+    # Collect all ads for the filtered technos
     ads = []
     for techno in technos:
         ads_for_techno = db.query(TechnoAds).filter(TechnoAds.techno_name_id == techno.techno_csr_code).all()
@@ -47,8 +57,23 @@ async def get_techno_ads(group_ids: List[int], db: Session = Depends(get_db)):
     if not ads:
         raise HTTPException(status_code=404, detail="No ads found for the given technos")
 
+    # Pagination logic
+    total_items = len(ads)  # Total ads count
+    total_pages = ceil(total_items / page_size)
+
+    if page > total_pages and total_items > 0:
+        raise HTTPException(status_code=404, detail="Page out of range")
+
+    # Slice ads for the current page
+    start = (page - 1) * page_size
+    end = start + page_size
+    paginated_ads = ads[start:end]
+
     return {
-        "count": len(ads),
+        "count": len(paginated_ads),
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "current_page": page,
         "technos": [
             {
                 "id": ad.id,
@@ -72,7 +97,7 @@ async def get_techno_ads(group_ids: List[int], db: Session = Depends(get_db)):
                 "techno_region_name": ad.region.region_name_uz if ad.region and ad.region.region_name_uz else None,
                 "techno_name": ad.techno_name.techno_name if ad.techno_name else None,
             }
-            for ad in ads
+            for ad in paginated_ads
         ]
     }
 
