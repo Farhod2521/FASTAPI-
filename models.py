@@ -6,8 +6,9 @@ from datetime import datetime as dt
 
 
 
-
-
+###################################################           ###################################################
+###################################################   TECHNO  ###################################################
+###################################################           ###################################################
 class TechnoVolumes(Base):
     __tablename__ = "techno_volumes"
 
@@ -101,7 +102,9 @@ class TechnoAds(Base):
 
     techno_district_id = Column(Integer, ForeignKey("districts.id"), nullable=True)
 
-##############   MACHINES AND MECHANISMS  ##########################
+###################################################            ###################################################
+###################################################   MMECHNO  ###################################################
+###################################################            ###################################################
 
 class MMechanoCategories(Base):
     __tablename__ = "mmechano_categories"
@@ -110,7 +113,6 @@ class MMechanoCategories(Base):
     category_name = Column(String(255), unique=True, nullable=False, index=True)
     category_logo = Column(String(255), nullable=False, default='categories/m-mechano/category_logo.png')
     category_desc = Column(String(255), nullable=True)
-
 
 
 class MMechanoGroups(Base):
@@ -122,23 +124,17 @@ class MMechanoGroups(Base):
     group_category_id = Column(Integer, ForeignKey('mmechano_categories.id', ondelete='SET DEFAULT'), nullable=True, default=1)
     
     group_category = relationship("MMechanoCategories", backref="mmechano_groups", lazy="joined")
-
 class MMechano(Base):
     __tablename__ = "mmechano_resources"
     
     mmechano_csr_code = Column(String(20), primary_key=True, index=True)
     mmechano_name = Column(String(500), unique=True, nullable=False)
-    mmechano_desc = Column(String(255), nullable=True)
     mmechano_measure = Column(String(25), nullable=False, default='kg')
     mmechano_group_id = Column(Integer, ForeignKey('mmechano_groups.id', ondelete='SET DEFAULT'), nullable=True, default=1)
-    mmechano_image = Column(String(255), nullable=True)
-    mmechano_views_count = Column(Integer, default=0)
-
-    mmechano_group = relationship("MMechanoGroups", backref="mmechano_resources", lazy="joined")
 
 
+    # mmechano_group = relationship("MMechanoGroups", backref="mmechano_resources", lazy="joined")
 
-##############   MACHINES AND MECHANISMS  E"LONLAR ##########################
 class MMechanoAds(Base):
     __tablename__ = 'mmechano_ads'
 
@@ -163,8 +159,9 @@ class MMechanoAds(Base):
     # Relationships
     mmechano_name = relationship("MMechano",primaryjoin="MMechano.mmechano_csr_code == foreign(MMechanoAds.mmechano_name_id)", lazy="joined")  # 'ads' is an example relationship name
   
-
-# MATERIALADS   E'LONLAR ###################################
+###################################################             ###################################################
+###################################################   MATERIAL  ###################################################
+###################################################             ###################################################
 class MaterialAds(Base):
     __tablename__ = 'material_ads'
 
@@ -192,7 +189,6 @@ class MaterialAds(Base):
     region = relationship("Regions", backref="materials", lazy="joined")
     material_details = relationship("Materials", primaryjoin="Materials.material_csr_code == foreign(MaterialAds.material_name_id)", lazy="joined")
 
-# Regions modeli
 class Regions(Base):
     __tablename__ = 'uzb_regions'
 

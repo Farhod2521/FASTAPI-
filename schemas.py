@@ -13,7 +13,9 @@ class AdsResponseModel(BaseModel):
     Uskuna_va_qurilmalar: int
     combined_results: List[Dict] 
 
-
+###################################################             ###################################################
+###################################################   MATERIAL  ###################################################
+###################################################             ###################################################
 
 # MatVolume filteri uchun Pydantic modeli
 class MatVolumeSchema(BaseModel):
@@ -42,7 +44,7 @@ class MatGroupSchema(BaseModel):
 
     class Config:
         from_attributes = True
-########################################       MaterialAdsSchema        #####################################
+
 
 class MaterialsSchema(BaseModel):
     material_name: str
@@ -75,7 +77,26 @@ class MaterialAdsSchema(BaseModel):
     class Config:
         from_attributes = True
 
-########################################      MMechanoAdsSchema      #####################################
+
+###################################################            ###################################################
+###################################################   MMECHNO  ###################################################
+###################################################            ###################################################
+class MMechanoCategoriesSchema(BaseModel):
+    id: int
+    category_name: str
+
+
+    class Config:
+        from_attributes = True
+
+class MMechanoGroupsSchema(BaseModel):
+    id: int
+    group_name: str
+
+
+    class Config:
+        from_attributes = True
+
 class MMechanoSchema(BaseModel):
     mmechano_name: str
 
@@ -106,31 +127,11 @@ class MMechanoAdsSchema(BaseModel):
     class Config:
         from_attributes = True
 
-########################################      MMechanoSchema      #####################################
-class MMechanoCategoriesSchema(BaseModel):
-    id: int
-    category_name: str
-    category_logo: str
-    category_desc: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-class MMechanoGroupsSchema(BaseModel):
-    id: int
-    group_name: str
-    group_desc: Optional[str] = None
-    group_category_id: Optional[int] = None  # Foreign key to MMechanoCategories
-
-    class Config:
-        from_attributes = True
 
 
-
-
-
-
-######################## TECNO   #########################
+###################################################           ###################################################
+###################################################   TECHNO  ###################################################
+###################################################           ###################################################
 class TechnoVolumesSchema(BaseModel):
     id: int
     volume_name: str
