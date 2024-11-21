@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from database import Base, engine
 from endpoints.materials import materials_router
+from endpoints.techno import techno_router
 from fastapi.middleware.cors import CORSMiddleware
 # Ma'lumotlar bazasini yaratish
 Base.metadata.create_all(bind=engine)
@@ -39,3 +40,4 @@ app.add_middleware(
 )
 
 app.include_router(materials_router)
+app.include_router(techno_router)

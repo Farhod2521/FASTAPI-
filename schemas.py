@@ -147,7 +147,7 @@ class TechnoCategoriesSchema(BaseModel):
     id: int
     category_name: str
     category_desc: Optional[str]
-    category_volume_id: int
+    # category_volume_id: int
 
     class Config:
         from_attributes = True 
@@ -157,14 +157,14 @@ class TechnoGroupsSchema(BaseModel):
     id: int
     group_name: str
     group_desc: Optional[str]
-    group_category_id: int
+    # group_category_id: int
 
     class Config:
         from_attributes = True 
 class TechnoSchema(BaseModel):
  
     techno_name: str
- 
+    techno_csr_code : str
 
     class Config:
         # from_attributes = True   # Pydantic 1.x uchun

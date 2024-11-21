@@ -11,7 +11,7 @@ import requests
 
 
 
-materials_router = APIRouter()
+materials_router = APIRouter(tags=["Material"])
 
 
 from sqlalchemy import case
@@ -22,7 +22,7 @@ async def material_name_csr_code_search(
     name_value: Optional[str] = None,
     code_value: Optional[str] = None,
     page: int = 1,
-    limit: int = 24,
+    limit: int = 12,
     db: Session = Depends(get_db)
 ):
     query = (
@@ -200,6 +200,7 @@ async def filter_materials(
 
 
 
+from math import ceil
 
 # MaterialAds obyektlarini filterlash uchun API
 @materials_router.get("/materials/filter", response_model=dict)
@@ -207,26 +208,42 @@ async def filter_materials(
     region_name: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
+    date: Optional[datetime] = None,
+    page: int = 1,  # Default to page 1
+    page_size: int = 24,  # Default to 10 items per page
     db: Session = Depends(get_db)
 ):
+    if page < 1 or page_size < 1:
+        raise HTTPException(status_code=400, detail="Page and page size must be positive integers.")
+
     query = db.query(MaterialAds)
 
     if region_name:
         query = query.join(Regions).filter(Regions.region_name_uz == region_name)
-    
+    if date:
+        query = query.filter(func.date(MaterialAds.material_updated_date) == date)
     if min_price is not None:
         query = query.filter(MaterialAds.material_price >= min_price)
-    
     if max_price is not None:
         query = query.filter(MaterialAds.material_price <= max_price)
 
-    materials = query.all()
+    total_items = query.count()  # Total number of records
+    total_pages = ceil(total_items / page_size)
+
+    if page > total_pages and total_items > 0:
+        raise HTTPException(status_code=404, detail="Page out of range")
+
+    # Apply pagination
+    materials = query.offset((page - 1) * page_size).limit(page_size).all()
 
     if not materials:
         raise HTTPException(status_code=404, detail="No materials found for the given filters")
 
     return {
         "count": len(materials),
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "current_page": page,
         "materials": [
             {
                 "id": material.id,
@@ -364,11 +381,21 @@ async def get_groups(category_id: int, db: Session = Depends(get_db)):
     return groups
 
 @materials_router.post("/material_ads/", response_model=dict)
-async def get_ads(group_ids: List[int], db: Session = Depends(get_db)):
+async def get_ads(
+    group_ids: List[int],
+    page: int = 1,  # Default to page 1
+    page_size: int = 12,  # Default to 10 items per page
+    db: Session = Depends(get_db)
+):
+    if page < 1 or page_size < 1:
+        raise HTTPException(status_code=400, detail="Page and page size must be positive integers.")
+
+    # Query materials based on group_ids
     materials = db.query(Materials).filter(Materials.material_group_id.in_(group_ids)).all()
     if not materials:
         raise HTTPException(status_code=404, detail="No materials found for the given groups")
 
+    # Collect all ads for the filtered materials
     ads = []
     for material in materials:
         ads_for_material = db.query(MaterialAds).filter(MaterialAds.material_name_id == material.material_csr_code).all()
@@ -376,8 +403,24 @@ async def get_ads(group_ids: List[int], db: Session = Depends(get_db)):
 
     if not ads:
         raise HTTPException(status_code=404, detail="No ads found for the given materials")
+
+    # Pagination logic
+    total_items = len(ads)  # Total ads count
+    total_pages = ceil(total_items / page_size)
+
+    if page > total_pages and total_items > 0:
+        raise HTTPException(status_code=404, detail="Page out of range")
+
+    # Slice ads for the current page
+    start = (page - 1) * page_size
+    end = start + page_size
+    paginated_ads = ads[start:end]
+
     return {
-        "count": len(ads),
+        "count": len(paginated_ads),
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "current_page": page,
         "materials": [
             {
                 "id": material.id,
@@ -402,6 +445,6 @@ async def get_ads(group_ids: List[int], db: Session = Depends(get_db)):
                 "material_district_id": material.material_district_id,
                 "material_name": material.material_details.material_name if material.material_details else None
             }
-            for material in ads
+            for material in paginated_ads
         ]
     }

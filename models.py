@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, DateTime,BigInteger
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime as dt
@@ -66,40 +66,40 @@ class Techno(Base):
     techno_name = Column(String(500), unique=True, nullable=False)  # Texnika nomi
     techno_desc = Column(String(255), nullable=True)  # Texnika tavsifi
     techno_measure = Column(String(25), nullable=False, default='kg')  # Texnika o‘lchov birligi
-    techno_group = Column(Integer, ForeignKey("techno_groups.id"), nullable=True)
+    techno_group_id = Column(BigInteger, ForeignKey("techno_groups.id"), nullable=True)  # Gruppaga bog'lanish
     techno_image = Column(String, nullable=True)  # Texnika uchun rasm
-    techno_views_count = Column(Integer, nullable=False, default=0)  # Tashriflar soni
-
+    techno_views_count = Column(Integer, nullable=False, default=0) 
 
 class TechnoAds(Base):
     __tablename__ = "techno_ads"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    techno_name_id = Column(String(20), ForeignKey("techno_resources.techno_csr_code"), nullable=False)  # Texnika nomi (FK)
-    techno_name = relationship("Techno",primaryjoin="Techno.techno_csr_code == foreign(TechnoAds.techno_name_id)", lazy="joined")
+    techno_name_id = Column(String(20), ForeignKey("techno_resources.techno_csr_code"), nullable=False)
+    techno_name = relationship("Techno", primaryjoin="Techno.techno_csr_code == foreign(TechnoAds.techno_name_id)", lazy="joined")
 
-    techno_description = Column(String(500), nullable=True)  # Texnika tavsifi
-    techno_price = Column(Float, nullable=False)  # Texnika narxi
-    techno_price_currency = Column(String(15), nullable=False, default='UZS')  # Narx valyutasi
-    techno_measure = Column(String(25), nullable=False)  # Texnika o‘lchov birligi
-    techno_image = Column(String, nullable=True)  # Texnika uchun rasm
-    techno_amount = Column(Float, nullable=False)  # Texnika miqdori
-    techno_amount_measure = Column(String(25), nullable=False)  # O‘lchov birligi
-    techno_status = Column(Boolean, default=True)  # E‘lon holati
-    techno_created_date = Column(DateTime, default=dt.utcnow)  # E‘lon joylangan vaqt
-    techno_updated_date = Column(DateTime, default=dt.utcnow) # E‘lon tahrirlangan vaqt
-    techno_deactivated_date = Column(DateTime, nullable=True)  # E‘lon o‘chirilgan vaqt
+    techno_description = Column(String(500), nullable=True)
+    techno_price = Column(Float, nullable=False)
+    techno_price_currency = Column(String(15), nullable=False, default='UZS')
+    techno_measure = Column(String(25), nullable=False)
+    techno_image = Column(String, nullable=True)
+    techno_amount = Column(Float, nullable=False)
+    techno_amount_measure = Column(String(25), nullable=False)
+    techno_status = Column(Boolean, default=True)
+    techno_created_date = Column(DateTime, default=dt.utcnow)
+    techno_updated_date = Column(DateTime, default=dt.utcnow)
+    techno_deactivated_date = Column(DateTime, nullable=True)
 
-    sertificate_blank_num = Column(String(10), nullable=False)  # Sertifikat blanka raqami
-    sertificate_reestr_num = Column(String(10), nullable=False)  # Sertifikat reestr raqami
+    sertificate_blank_num = Column(String(10), nullable=False)
+    sertificate_reestr_num = Column(String(10), nullable=False)
 
-    techno_owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # E‘lon muallifi (FK)
-    company_name = Column(String(255), nullable=True)  # Kompaniya nomi
-    company_stir = Column(String(9), nullable=True)  # Kompaniya STIR
-    techno_region_id = Column(Integer, ForeignKey("regions.id"), nullable=True)  # Viloyat (FK)
-    techno_district_id = Column(Integer, ForeignKey("districts.id"), nullable=True)  # Tuman/shahar (FK)
+    techno_owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    company_name = Column(String(255), nullable=True)
+    company_stir = Column(String(9), nullable=True)
 
-  
+    techno_region_id = Column(Integer, ForeignKey('uzb_regions.id'), nullable=True)  # Region (FK)
+    region = relationship("Regions", backref="technos", lazy="joined")
+
+    techno_district_id = Column(Integer, ForeignKey("districts.id"), nullable=True)
 
 ##############   MACHINES AND MECHANISMS  ##########################
 
@@ -201,7 +201,7 @@ class Regions(Base):
     region_name_uz = Column(String(30), nullable=False)
     region_name_en = Column(String(30), nullable=True)
     region_name_ru = Column(String(30), nullable=True)
-
+    
 # Materials modeli
 class Materials(Base):
     __tablename__ = "material_resources"
