@@ -139,48 +139,57 @@ async def material_name_csr_code_search(
 
 
 @materials_router.get("/material/name_group_category/", response_model=dict)
-async def material_name_group_category(
-    material_name: Optional[str] = None,
-    material_csr: Optional[str] = None,
+async def filter_materials(
+    region_name: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
     db: Session = Depends(get_db)
 ):
-    query = (
-        db.query(
-            Materials,
-            MatGroups.group_name,
-            MatCategories.category_name,
-            MatVolumes.volume_name
-        )
-        .join(MatGroups, Materials.material_group_id == MatGroups.id)
-        .join(MatCategories, MatGroups.group_category_id == MatCategories.id)
-        .join(MatVolumes, MatCategories.category_volume_id == MatVolumes.id)
-    )
+    query = db.query(MaterialAds)
 
-    if material_csr:
-        query = query.filter(Materials.material_csr_code == material_csr)
-    if material_name:
-        query = query.filter(Materials.material_name == material_name)
+    if region_name:
+        query = query.join(Regions).filter(Regions.region_name_uz == region_name)
+    
+    if min_price is not None:
+        query = query.filter(MaterialAds.material_price >= min_price)
+    
+    if max_price is not None:
+        query = query.filter(MaterialAds.material_price <= max_price)
 
-    material_data = query.all()
+    materials = query.all()
 
-    result = {
+    if not materials:
+        raise HTTPException(status_code=404, detail="No materials found for the given filters")
+
+    return {
+        "count": len(materials),
         "materials": [
             {
-                "material_csr_code": mat.Materials.material_csr_code,
-                "material_name": mat.Materials.material_name,
-                "material_desc": mat.Materials.material_desc,
-                "material_measure": mat.Materials.material_measure,
-                "material_image": mat.Materials.material_image,
-                "material_views_count": mat.Materials.material_views_count,
-                "materil_gost": mat.Materials.materil_gost,
-                "material_group_name": mat.group_name,
-                "material_category_name": mat.category_name,
-                "material_volume_name": mat.volume_name
+                "id": material.id,
+                "material_name_id": material.material_name_id,
+                "material_name": db.query(Materials).filter(Materials.material_csr_code == material.material_name_id).first().material_name if db.query(Materials).filter(Materials.material_csr_code == material.material_name_id).first() else None,
+                "material_description": material.material_description,
+                "material_price": material.material_price,
+                "material_price_currency": material.material_price_currency,
+                "material_measure": material.material_measure,
+                "material_image": material.material_image,
+                "material_amount": material.material_amount,
+                "material_amount_measure": material.material_amount_measure,
+                "material_status": material.material_status,
+                "material_created_date": material.material_created_date,
+                "material_updated_date": material.material_updated_date,
+                "material_deactivated_date": material.material_deactivated_date,
+                "sertificate_blank_num": material.sertificate_blank_num,
+                "sertificate_reestr_num": material.sertificate_reestr_num,
+                "material_owner_id": material.material_owner_id,
+                "company_name": material.company_name,
+                "company_stir": material.company_stir,
+                "material_region_name": material.region.region_name_uz if material.region else None,
+                "material_district_id": material.material_district_id,
             }
-            for mat in material_data
+            for material in materials
         ]
     }
-    return result
 
 
 
@@ -219,14 +228,32 @@ async def filter_materials(
     return {
         "count": len(materials),
         "materials": [
-            MaterialAdsSchema(
-                **material.__dict__,
-                material_name=material.material_details.material_name if material.material_details else None,
-                material_region_name=material.region.region_name_uz if material.region else None
-            ) for material in materials
+            {
+                "id": material.id,
+                "material_name_id": material.material_name_id,
+                "material_description": material.material_description,
+                "material_price": material.material_price,
+                "material_price_currency": material.material_price_currency,
+                "material_measure": material.material_measure,
+                "material_image": material.material_image,
+                "material_amount": material.material_amount,
+                "material_amount_measure": material.material_amount_measure,
+                "material_status": material.material_status,
+                "material_created_date": material.material_created_date,
+                "material_updated_date": material.material_updated_date,
+                "material_deactivated_date": material.material_deactivated_date,
+                "sertificate_blank_num": material.sertificate_blank_num,
+                "sertificate_reestr_num": material.sertificate_reestr_num,
+                "material_owner_id": material.material_owner_id,
+                "company_name": material.company_name,
+                "company_stir": material.company_stir,
+                "material_region_name": material.region.region_name_uz if material.region else None,
+                "material_district_id": material.material_district_id,
+                "material_name": material.material_details.material_name if material.material_details else None
+            }
+            for material in materials
         ]
     }
-
 
 # MaterialAds obyektlarini olish (pagination qo'shildi)
 @materials_router.get("/materials/", response_model=List[MaterialAdsSchema])
@@ -250,65 +277,65 @@ async def get_materials(page: int = 1, limit: int = 24, db: Session = Depends(ge
 
 
 
-@materials_router.get("/all/ads/", response_model=AdsResponseModel)
-async def get_all_ads(request: Request, page: int = 1, limit: int = 24, db: Session = Depends(get_db)):
-    try:
-        skip = (page - 1) * limit
+# @materials_router.get("/all/ads/", response_model=AdsResponseModel)
+# async def get_all_ads(request: Request, page: int = 1, limit: int = 24, db: Session = Depends(get_db)):
+#     try:
+#         skip = (page - 1) * limit
 
-        # Ads query
-        ads_query = db.query(MMechanoAds).filter(
-            MMechanoAds.mmechano_status == True,
-            MMechanoAds.company_stir == 310037819
-        )
-        mmechano_count = ads_query.count()
+#         # Ads query
+#         ads_query = db.query(MMechanoAds).filter(
+#             MMechanoAds.mmechano_status == True,
+#             MMechanoAds.company_stir == 310037819
+#         )
+#         mmechano_count = ads_query.count()
 
-        # Material query
-        material_query = db.query(MaterialAds).filter(
-            MaterialAds.material_status == True,
-            MaterialAds.company_stir == 310037819
-        )
-        material_count = material_query.count()
+#         # Material query
+#         material_query = db.query(MaterialAds).filter(
+#             MaterialAds.material_status == True,
+#             MaterialAds.company_stir == 310037819
+#         )
+#         material_count = material_query.count()
 
-        # techno_query = db.query(TechnoAds).filter(
-        #     TechnoAds.techno_status == True,
-        #     TechnoAds.company_stir == 310037819
-        # )
-        # techno_count = techno_query.count()
+#         # techno_query = db.query(TechnoAds).filter(
+#         #     TechnoAds.techno_status == True,
+#         #     TechnoAds.company_stir == 310037819
+#         # )
+#         # techno_count = techno_query.count()
 
-        # Sorting logic
-        mmechno_sort_by = request.query_params.get('sort_by', '-mmechano_updated_date')
-        if mmechno_sort_by.startswith('-'):
-            ads_query = ads_query.order_by(getattr(MMechanoAds, mmechno_sort_by[1:]).desc())
-        else:
-            ads_query = ads_query.order_by(getattr(MMechanoAds, mmechno_sort_by))
+#         # Sorting logic
+#         mmechno_sort_by = request.query_params.get('sort_by', '-mmechano_updated_date')
+#         if mmechno_sort_by.startswith('-'):
+#             ads_query = ads_query.order_by(getattr(MMechanoAds, mmechno_sort_by[1:]).desc())
+#         else:
+#             ads_query = ads_query.order_by(getattr(MMechanoAds, mmechno_sort_by))
         
-        material_sort_by = request.query_params.get('sort_by', '-material_updated_date')
-        if material_sort_by.startswith('-'):
-            material_query = material_query.order_by(getattr(MaterialAds, material_sort_by[1:]).desc())
-        else:
-            material_query = material_query.order_by(getattr(MaterialAds, material_sort_by))
+#         material_sort_by = request.query_params.get('sort_by', '-material_updated_date')
+#         if material_sort_by.startswith('-'):
+#             material_query = material_query.order_by(getattr(MaterialAds, material_sort_by[1:]).desc())
+#         else:
+#             material_query = material_query.order_by(getattr(MaterialAds, material_sort_by))
 
-        # Apply pagination
-        all_ads = ads_query.offset(skip).limit(limit).all()
-        all_materials = material_query.offset(skip).limit(limit).all()
+#         # Apply pagination
+#         all_ads = ads_query.offset(skip).limit(limit).all()
+#         all_materials = material_query.offset(skip).limit(limit).all()
       
-        # Combine results
-        combined_results = []
-        combined_results.extend([MaterialAdsSchema.from_orm(mat).dict() for mat in all_materials])
-        combined_results.extend([MMechanoAdsSchema.from_orm(ad).dict() for ad in all_ads])
+#         # Combine results
+#         combined_results = []
+#         combined_results.extend([MaterialAdsSchema.from_orm(mat).dict() for mat in all_materials])
+#         combined_results.extend([MMechanoAdsSchema.from_orm(ad).dict() for ad in all_ads])
         
         
 
-        return AdsResponseModel(
-            Material_soni=material_count,
-            Mashina_va_mexanizlar_soni=mmechano_count,
-            Kichik_mexnizimlar_soni= 0,
-            Uskuna_va_qurilmalar = 0,
-            combined_results=combined_results
-        )
+#         return AdsResponseModel(
+#             Material_soni=material_count,
+#             Mashina_va_mexanizlar_soni=mmechano_count,
+#             Kichik_mexnizimlar_soni= 0,
+#             Uskuna_va_qurilmalar = 0,
+#             combined_results=combined_results
+#         )
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # MaterialVolume bo'yicha filterlash
 @materials_router.get("/materials/volume/{volume_id}", response_model=MatVolumeSchema)

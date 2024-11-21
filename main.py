@@ -27,8 +27,9 @@ origins = [
     "http://127.0.0.1:5500",
     "http://localhost:8000",
     "https://backend-market.tmsiti.uz",  # Sizning veb-saytingiz yoki kerakli domenlar
+    "http://localhost:3000",
+    "https://new-catalog.vercel.app",
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
