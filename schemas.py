@@ -19,7 +19,7 @@ class AdsResponseModel(BaseModel):
 class MatVolumeSchema(BaseModel):
     id: int
     volume_name: str
-    categories: List[str]
+    # categories: List[str]
 
     class Config:
         from_attributes = True
@@ -29,7 +29,7 @@ class MatVolumeSchema(BaseModel):
 class MatCategorySchema(BaseModel):
     id: int
     category_name: str
-    groups: List[str]
+    # groups: List[str]
 
     class Config:
         from_attributes = True
@@ -38,7 +38,7 @@ class MatCategorySchema(BaseModel):
 class MatGroupSchema(BaseModel):
     id: int
     group_name: str
-    materials: List[str]
+    # materials: List[str]
 
     class Config:
         from_attributes = True
@@ -52,7 +52,7 @@ class MaterialsSchema(BaseModel):
 class MaterialAdsSchema(BaseModel):
     id: int
     material_name_id: str
-    mmechano_name: Optional[MaterialsSchema] = None 
+    material_name: Optional[MaterialsSchema] = None 
     material_description: Optional[str] = None
     material_price: float
     material_price_currency: str

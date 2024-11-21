@@ -338,80 +338,70 @@ async def get_materials(page: int = 1, limit: int = 24, db: Session = Depends(ge
 #         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # MaterialVolume bo'yicha filterlash
-@materials_router.get("/materials/volume/{volume_id}", response_model=MatVolumeSchema)
-async def get_volume_details(volume_id: int, db: Session = Depends(get_db)):
-    volume = db.query(MatVolumes).filter(MatVolumes.id == volume_id).first()
-    if not volume:
-        raise HTTPException(status_code=404, detail="Volume not found")
-
-    categories = [category.category_name for category in volume.categories]
-    
-    return MatVolumeSchema(
-        id=volume.id,
-        volume_name=volume.volume_name,
-        categories=categories
-    )
-
-# MatCategory bo'yicha filterlash
-@materials_router.get("/materials/categories/{category_id}", response_model=MatCategorySchema)
-async def get_category_details(category_id: int, db: Session = Depends(get_db)):
-    category = db.query(MatCategories).filter(MatCategories.id == category_id).first()
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
-
-    groups = [group.group_name for group in category.groups]
-    
-    return MatCategorySchema(
-        id=category.id,
-        category_name=category.category_name,
-        groups=groups
-    )
-
-# MatGroup bo'yicha filterlash
-@materials_router.get("/materials/groups/{group_id}", response_model=MatGroupSchema)
-async def get_group_details(group_id: int, db: Session = Depends(get_db)):
-    group = db.query(MatGroups).filter(MatGroups.id == group_id).first()
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-
-    materials = [material.material_name for material in group.category.groups]
-    
-    return MatGroupSchema(
-        id=group.id,
-        group_name=group.group_name,
-        materials=materials
-    )
-
-from elasticsearch import Elasticsearch
-from pydantic import BaseModel
-es = Elasticsearch(["https://localhost:9200"], verify_certs=False)
 
 
-# Material modelini belgilash uchun Pydantic modelini yaratamiz
-class MaterialSearch(BaseModel):
-    material_name: str
 
-# Elasticsearchdan ma'lumot qidirish uchun API endpoint
-@materials_router.post("/materials/search/")
-async def search_materials(query: MaterialSearch):
-    # Elasticsearch qidiruv so'rovi
-    search_query = {
-        "query": {
-            "match": {
-                "material_name": query.material_name
+##################   MATERIAL    VOLUME CATGORY GROUPS ##############################
+@materials_router.get("/material_volume/", response_model=List[MatVolumeSchema])
+async def get_volumes(db: Session = Depends(get_db)):
+    volumes = db.query(MatVolumes).all()
+    return volumes
+
+
+@materials_router.get("/material_categories/{volume_id}", response_model=List[MatCategorySchema])
+async def get_categories(volume_id: int, db: Session = Depends(get_db)):
+    categories = db.query(MatCategories).filter(MatCategories.category_volume_id == volume_id).all()
+    if not categories:
+        raise HTTPException(status_code=404, detail="No categories found for the given volume")
+    return categories
+
+
+@materials_router.get("/material_groups/{category_id}", response_model=List[MatGroupSchema])
+async def get_groups(category_id: int, db: Session = Depends(get_db)):
+    groups = db.query(MatGroups).filter(MatGroups.group_category_id == category_id).all()
+    if not groups:
+        raise HTTPException(status_code=404, detail="No groups found for the given category")
+    return groups
+
+@materials_router.post("/material_ads/", response_model=dict)
+async def get_ads(group_ids: List[int], db: Session = Depends(get_db)):
+    materials = db.query(Materials).filter(Materials.material_group_id.in_(group_ids)).all()
+    if not materials:
+        raise HTTPException(status_code=404, detail="No materials found for the given groups")
+
+    ads = []
+    for material in materials:
+        ads_for_material = db.query(MaterialAds).filter(MaterialAds.material_name_id == material.material_csr_code).all()
+        ads.extend(ads_for_material)
+
+    if not ads:
+        raise HTTPException(status_code=404, detail="No ads found for the given materials")
+    return {
+        "count": len(ads),
+        "materials": [
+            {
+                "id": material.id,
+                "material_name_id": material.material_name_id,
+                "material_description": material.material_description,
+                "material_price": material.material_price,
+                "material_price_currency": material.material_price_currency,
+                "material_measure": material.material_measure,
+                "material_image": material.material_image,
+                "material_amount": material.material_amount,
+                "material_amount_measure": material.material_amount_measure,
+                "material_status": material.material_status,
+                "material_created_date": material.material_created_date,
+                "material_updated_date": material.material_updated_date,
+                "material_deactivated_date": material.material_deactivated_date,
+                "sertificate_blank_num": material.sertificate_blank_num,
+                "sertificate_reestr_num": material.sertificate_reestr_num,
+                "material_owner_id": material.material_owner_id,
+                "company_name": material.company_name,
+                "company_stir": material.company_stir,
+                "material_region_name": material.region.region_name_uz if material.region else None,
+                "material_district_id": material.material_district_id,
+                "material_name": material.material_details.material_name if material.material_details else None
             }
-        }
+            for material in ads
+        ]
     }
-    response = es.search(index="materials_index", body=search_query)
-    
-    # Qidiruv natijalarini formatlash
-    results = [
-        {
-            "material_csr_code": hit["_source"]["material_csr_code"],
-            "material_name": hit["_source"]["material_name"],
-            "material_desc": hit["_source"].get("material_desc"),
-            "material_measure": hit["_source"].get("material_measure")
-        }
-        for hit in response["hits"]["hits"]
-    ]
-    return {"results": results}
