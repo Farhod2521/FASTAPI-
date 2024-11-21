@@ -8,6 +8,8 @@ from typing import List, Optional
 from sqlalchemy import func
 from math import ceil
 from datetime import datetime
+
+from sqlalchemy.orm import aliased
 techno_router = APIRouter(tags=["Techno"])
 
 
@@ -101,7 +103,7 @@ async def get_techno_ads(
         ]
     }
 
-
+from sqlalchemy import case
 
 @techno_router.get("/techno-ads/filter", response_model=dict)
 async def filter_techno_ads(
@@ -109,14 +111,43 @@ async def filter_techno_ads(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     date: Optional[datetime] = None,
+    name_value: Optional[str] = None,
+    code_value: Optional[str] = None,
     page: int = 1,  # Default to page 1
     page_size: int = 12,  # Default to 12 items per page
     db: Session = Depends(get_db)
 ):
+    
+    TechnoAlias = aliased(Techno)
+
+    query = (
+        db.query(TechnoAds)
+        .join(TechnoAlias, TechnoAlias.techno_csr_code == TechnoAds.techno_name_id)
+    )
+
+    # Filter by name_value on techno_name in Materials
+    if name_value:
+        query = query.filter(TechnoAlias.techno_name.ilike(f"%{name_value}%"))
+
+    # Filter by code_value on techno_csr_code in Materials
+    if code_value:
+        query = query.filter(TechnoAlias.techno_csr_code.ilike(f"%{code_value}%"))
+
+    # Ordering by name_value match priority
+    if name_value:
+        query = query.order_by(
+            case(
+                (TechnoAlias.techno_name.ilike(f"{name_value}%"), 1),
+                else_=2
+            ),
+            TechnoAlias.techno_name
+        )
+    else:
+        query = query.order_by(TechnoAlias.techno_name)
     if page < 1 or page_size < 1:
         raise HTTPException(status_code=400, detail="Page and page size must be positive integers.")
 
-    query = db.query(TechnoAds)
+    
 
     if region_name:
         query = query.join(Regions).filter(Regions.region_name_uz == region_name)
