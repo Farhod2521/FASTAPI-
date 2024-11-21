@@ -1,10 +1,13 @@
 from typing import List
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from models import TechnoVolumes, TechnoCategories, TechnoGroups, Techno, TechnoAds  # Import the techno models
+from models import TechnoVolumes, TechnoCategories, TechnoGroups, Techno, TechnoAds, Regions  # Import the techno models
 from schemas import TechnoVolumesSchema, TechnoCategoriesSchema, TechnoGroupsSchema  # Import corresponding schemas
 from database import get_db  # Dependency to get DB session
-
+from typing import List, Optional
+from sqlalchemy import func
+from math import ceil
+from datetime import datetime
 techno_router = APIRouter(tags=["Techno"])
 
 
@@ -70,5 +73,76 @@ async def get_techno_ads(group_ids: List[int], db: Session = Depends(get_db)):
                 "techno_name": ad.techno_name.techno_name if ad.techno_name else None,
             }
             for ad in ads
+        ]
+    }
+
+
+
+@techno_router.get("/techno-ads/filter", response_model=dict)
+async def filter_techno_ads(
+    region_name: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    date: Optional[datetime] = None,
+    page: int = 1,  # Default to page 1
+    page_size: int = 12,  # Default to 12 items per page
+    db: Session = Depends(get_db)
+):
+    if page < 1 or page_size < 1:
+        raise HTTPException(status_code=400, detail="Page and page size must be positive integers.")
+
+    query = db.query(TechnoAds)
+
+    if region_name:
+        query = query.join(Regions).filter(Regions.region_name_uz == region_name)
+    if date:
+        query = query.filter(func.date(TechnoAds.techno_updated_date) == date)
+    if min_price is not None:
+        query = query.filter(TechnoAds.techno_price >= min_price)
+    if max_price is not None:
+        query = query.filter(TechnoAds.techno_price <= max_price)
+
+    total_items = query.count()  # Total number of records
+    total_pages = ceil(total_items / page_size)
+
+    if page > total_pages and total_items > 0:
+        raise HTTPException(status_code=404, detail="Page out of range")
+
+    # Apply pagination
+    techno_ads = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    if not techno_ads:
+        raise HTTPException(status_code=404, detail="No techno ads found for the given filters")
+
+    return {
+        "count": len(techno_ads),
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "current_page": page,
+        "techno_ads": [
+            {
+                "id": techno.id,
+                "techno_name_id": techno.techno_name_id,
+                "techno_description": techno.techno_description,
+                "techno_price": techno.techno_price,
+                "techno_price_currency": techno.techno_price_currency,
+                "techno_measure": techno.techno_measure,
+                "techno_image": techno.techno_image,
+                "techno_amount": techno.techno_amount,
+                "techno_amount_measure": techno.techno_amount_measure,
+                "techno_status": techno.techno_status,
+                "techno_created_date": techno.techno_created_date,
+                "techno_updated_date": techno.techno_updated_date,
+                "techno_deactivated_date": techno.techno_deactivated_date,
+                "sertificate_blank_num": techno.sertificate_blank_num,
+                "sertificate_reestr_num": techno.sertificate_reestr_num,
+                "techno_owner_id": techno.techno_owner_id,
+                "company_name": techno.company_name,
+                "company_stir": techno.company_stir,
+                "techno_region_name": techno.region.region_name_uz if techno.region else None,
+                "techno_district_id": techno.techno_district_id,
+                "techno_name": techno.techno_name.techno_name if techno.techno_name else None
+            }
+            for techno in techno_ads
         ]
     }
