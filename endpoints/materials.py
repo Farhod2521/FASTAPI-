@@ -476,3 +476,76 @@ async def get_ads(
             for material in paginated_ads
         ]
     }
+
+
+
+
+@materials_router.post("/material_klassifikator/", response_model=dict)
+async def get_filtered_materials(
+    group_ids: Optional[List[int]] = None,
+    volume_ids: Optional[List[int]] = None,
+    category_ids: Optional[List[int]] = None,
+    page: int = 1,  # Default to page 1
+    page_size: int = 12,  # Default to 12 items per page
+    db: Session = Depends(get_db)
+):
+    if page < 1 or page_size < 1:
+        raise HTTPException(status_code=400, detail="Page and page size must be positive integers.")
+
+    query = db.query(Materials)
+
+    # Filter by group_ids if provided
+    if group_ids:
+        query = query.filter(Materials.material_group_id.in_(group_ids))
+
+    # Filter by category_ids if provided
+    if category_ids:
+        query = query.join(MatGroups, Materials.material_group_id == MatGroups.id)
+        query = query.filter(MatGroups.group_category_id.in_(category_ids))
+
+    # Filter by volume_ids if provided
+    if volume_ids:
+        query = (
+            query.join(MatGroups, Materials.material_group_id == MatGroups.id)
+            .join(MatCategories, MatGroups.group_category_id == MatCategories.id)
+            .join(MatVolumes, MatCategories.category_volume_id == MatVolumes.id)
+            .filter(MatVolumes.id.in_(volume_ids))
+        )
+
+    # Fetch all filtered materials
+    materials = query.all()
+
+    if not materials:
+        raise HTTPException(status_code=404, detail="No materials found for the given filters")
+
+    # Pagination logic
+    total_items = len(materials)
+    total_pages = ceil(total_items / page_size)
+
+    if page > total_pages and total_items > 0:
+        raise HTTPException(status_code=404, detail="Page out of range")
+
+    start = (page - 1) * page_size
+    end = start + page_size
+    paginated_materials = materials[start:end]
+
+    # Prepare the response
+    return {
+        "count": len(paginated_materials),
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "current_page": page,
+        "materials": [
+            {
+                "material_csr_code": material.material_csr_code,
+                "material_name": material.material_name,
+                "material_desc": material.material_desc,
+                "material_measure": material.material_measure,
+                "material_group_id": material.material_group_id,
+                "material_image": material.material_image,
+                "material_views_count": material.material_views_count,
+                "materil_gost": material.materil_gost,
+            }
+            for material in paginated_materials
+        ]
+    }
