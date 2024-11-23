@@ -278,7 +278,7 @@ async def global_search(
     name_value: Optional[str] = None,
     category: Optional[str]= None,
     page: int = 1,
-    limit: int = 12,
+    limit: int = 50,
     db: Session = Depends(get_db),
 ):
     page = max(page, 1)
