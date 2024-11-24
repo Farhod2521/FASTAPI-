@@ -32,6 +32,7 @@ origins = [
     "https://backend-market.tmsiti.uz",  # Sizning veb-saytingiz yoki kerakli domenlar
     "http://localhost:3000",
     "https://new-catalog.vercel.app",
+    "https://www.mkinfo.uz",
 ]
 app.add_middleware(
     CORSMiddleware,
