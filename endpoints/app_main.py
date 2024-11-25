@@ -10,9 +10,31 @@ from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import case
 from sqlalchemy import func
-
+import httpx
 
 app_main_router =  APIRouter(tags=["Main"])
+
+
+
+
+@app_main_router.get("/soliq_data/", response_model=dict)
+async def soliq_data(mxik_code: Optional[str] = None):
+    if mxik_code:
+        url1 = f"https://mspd-api.soliq.uz/minstroy/construction/get-factura-list-by-catalog-code?catalogCode={mxik_code}&fromDate=01.11.2024&toDate=25.11.2024"
+        
+        async with httpx.AsyncClient() as client:
+            response1 = await client.get(url1)
+        
+        if response1.status_code == 200:
+            data1 = response1.json()
+            return data1
+        else:
+            error_message = "Serverdan yaroqsiz javob qaytardi"
+            raise HTTPException(status_code=response1.status_code, detail={'error': error_message})
+    else:
+        error_message = "mxik_code parametri kerak"
+        raise HTTPException(status_code=400, detail={'error': error_message})
+
 
 
 
