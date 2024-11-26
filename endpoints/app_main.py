@@ -16,7 +16,7 @@ app_main_router =  APIRouter(tags=["Main"])
 
 
 
-
+###############################   SOLIQ API   #############################################
 @app_main_router.get("/soliq_data/", response_model=dict)
 async def soliq_data(mxik_code: Optional[str] = None):
     if mxik_code:
@@ -34,6 +34,65 @@ async def soliq_data(mxik_code: Optional[str] = None):
     else:
         error_message = "mxik_code parametri kerak"
         raise HTTPException(status_code=400, detail={'error': error_message})
+
+
+
+########################   REGIONS AD   ###########################
+@app_main_router.post("/monitoring/regions/", response_model=dict)
+async def monitor_regions(
+    regions_name: Optional[List[str]] = None,
+    db: Session = Depends(get_db),
+    page: int = 1,  # Sahifa raqami (default 1)
+    limit: int = 24,  # Har sahifada ko'rsatiladigan elementlar soni (default 12)
+):
+    # Barcha MaterialAds'larni olish uchun asosiy query
+    query = db.query(MaterialAds)
+
+    # regions_name mavjud bo'lsa, filter qo'llash
+    if regions_name:
+        query = query.join(MaterialAds.region).filter(
+            Regions.region_name_uz.in_(regions_name)
+        )
+
+    # Total count olish (pagination uchun)
+    total_count = query.count()
+
+    # Pagination uchun limit va offset qo'llash
+    results = query.offset((page - 1) * limit).limit(limit).all()
+
+    # Natijalarni formatlash
+    return {
+        "count": total_count,
+        "page": page,
+        "limit": limit,
+        "data": [
+            {
+                "id": material.id,
+                "material_name_id": material.material_name_id,
+                "material_name": db.query(Materials).filter(Materials.material_csr_code == material.material_name_id).first().material_name if db.query(Materials).filter(Materials.material_csr_code == material.material_name_id).first() else None,
+                "material_description": material.material_description,
+                "material_price": material.material_price,
+                "material_price_currency": material.material_price_currency,
+                "material_measure": material.material_measure,
+                "material_image": material.material_image,
+                "material_amount": material.material_amount,
+                "material_amount_measure": material.material_amount_measure,
+                "material_status": material.material_status,
+                "material_created_date": material.material_created_date,
+                "material_updated_date": material.material_updated_date,
+                "material_deactivated_date": material.material_deactivated_date,
+                "sertificate_blank_num": material.sertificate_blank_num,
+                "sertificate_reestr_num": material.sertificate_reestr_num,
+                "material_owner_id": material.material_owner_id,
+                "company_name": material.company_name,
+                "company_stir": material.company_stir,
+                "material_region_name": material.region.region_name_uz if material.region else None,
+                "material_district_id": material.material_district_id,
+            }
+            for material in results
+        ]
+    }
+
 
 
 
@@ -293,60 +352,6 @@ async def monitoring_list(db: Session = Depends(get_db)):
 
 
 
-
-@app_main_router.get("/monitoring/region/filter/", response_model=dict)
-async def filter_materials(
-    region_name: Optional[str] = None,
-    page: int = 1,
-    limit: int = 24,
-    db: Session = Depends(get_db)
-):
-    # Calculate offset based on the page and limit
-    offset = (page - 1) * limit
-    
-    query = db.query(MaterialAds)
-
-    if region_name:
-        query = query.join(Regions).filter(Regions.region_name_uz == region_name)
-
-    query = query.offset(offset).limit(limit)
-
-    materials = query.all()
-
-    if not materials:
-        raise HTTPException(status_code=404, detail="No materials found for the given filters")
-    total_count = query.count()
-
-    return {
-        "page": page,
-        "limit": limit,
-        "materials": [
-            {
-                "id": material.id,
-                "material_name_id": material.material_name_id,
-                "material_name": db.query(Materials).filter(Materials.material_csr_code == material.material_name_id).first().material_name if db.query(Materials).filter(Materials.material_csr_code == material.material_name_id).first() else None,
-                "material_description": material.material_description,
-                "material_price": material.material_price,
-                "material_price_currency": material.material_price_currency,
-                "material_measure": material.material_measure,
-                "material_image": material.material_image,
-                "material_amount": material.material_amount,
-                "material_amount_measure": material.material_amount_measure,
-                "material_status": material.material_status,
-                "material_created_date": material.material_created_date,
-                "material_updated_date": material.material_updated_date,
-                "material_deactivated_date": material.material_deactivated_date,
-                "sertificate_blank_num": material.sertificate_blank_num,
-                "sertificate_reestr_num": material.sertificate_reestr_num,
-                "material_owner_id": material.material_owner_id,
-                "company_name": material.company_name,
-                "company_stir": material.company_stir,
-                "material_region_name": material.region.region_name_uz if material.region else None,
-                "material_district_id": material.material_district_id,
-            }
-            for material in materials
-        ]
-    }
 # @app_main_router.get("/monitoring/region/filter/", response_model=dict)
 # async def monitor_region_filter(
 #     region_name: Optional[str] = None,
@@ -466,7 +471,7 @@ async def global_search(
     name_value: Optional[str] = None,
     category: Optional[str] = None,
     page: int = 1,
-    limit: int = 10000,
+    limit: int = 50,
     db: Session = Depends(get_db),
 ):
     page = max(page, 1)
