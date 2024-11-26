@@ -9,7 +9,7 @@ from schemas import MaterialAdsSchema, MaterialsSchema
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import case
-from sqlalchemy import func
+from sqlalchemy import func, distinct
 import httpx
 
 app_main_router =  APIRouter(tags=["Main"])
@@ -35,8 +35,22 @@ async def soliq_data(mxik_code: Optional[str] = None):
         error_message = "mxik_code parametri kerak"
         raise HTTPException(status_code=400, detail={'error': error_message})
 
+############################################  REGION  KOMPANIY #####
+@app_main_router.get("/monitoring/region_by_filter_company/")
+async def region_by_filter_company(db: Session = Depends(get_db)):
+    # Querying to count unique company_stir in each region
+    results = (
+        db.query(
+            Regions.region_name_uz,  # Viloyat nomi
+            func.count(distinct(MaterialAds.company_stir)).label("company_count")  # Unique kompaniyalarni hisoblash
+        )
+        .join(MaterialAds, MaterialAds.material_region_id == Regions.id)  # Regions va MaterialAds o'rtasidagi join
+        .group_by(Regions.region_name_uz)  # Guruhlash viloyatlar bo'yicha
+        .all()
+    )
 
-
+    # Resultni JSON shaklida qaytarish
+    return [{"region": region_name, "company_count": company_count} for region_name, company_count in results]
 ########################   REGIONS AD   ###########################
 @app_main_router.post("/monitoring/regions/", response_model=dict)
 async def monitor_regions(
@@ -45,22 +59,13 @@ async def monitor_regions(
     page: int = 1,  # Sahifa raqami (default 1)
     limit: int = 24,  # Har sahifada ko'rsatiladigan elementlar soni (default 12)
 ):
-    # Barcha MaterialAds'larni olish uchun asosiy query
     query = db.query(MaterialAds)
-
-    # regions_name mavjud bo'lsa, filter qo'llash
     if regions_name:
         query = query.join(MaterialAds.region).filter(
             Regions.region_name_uz.in_(regions_name)
         )
-
-    # Total count olish (pagination uchun)
     total_count = query.count()
-
-    # Pagination uchun limit va offset qo'llash
     results = query.offset((page - 1) * limit).limit(limit).all()
-
-    # Natijalarni formatlash
     return {
         "count": total_count,
         "page": page,
