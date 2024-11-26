@@ -38,7 +38,7 @@ async def soliq_data(mxik_code: Optional[str] = None):
 ############################################  REGION  KOMPANIY #####
 @app_main_router.get("/monitoring/region_by_filter_company/")
 async def region_by_filter_company(db: Session = Depends(get_db)):
-    # Querying to count unique company_stir in each region
+    # Querying to count unique company_stir in each region and order by company_count in descending order
     results = (
         db.query(
             Regions.region_name_uz,  # Viloyat nomi
@@ -46,6 +46,7 @@ async def region_by_filter_company(db: Session = Depends(get_db)):
         )
         .join(MaterialAds, MaterialAds.material_region_id == Regions.id)  # Regions va MaterialAds o'rtasidagi join
         .group_by(Regions.region_name_uz)  # Guruhlash viloyatlar bo'yicha
+        .order_by(func.count(distinct(MaterialAds.company_stir)).desc())  # Kamayish tartibida saralash
         .all()
     )
 
