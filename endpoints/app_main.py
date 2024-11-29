@@ -17,7 +17,7 @@ app_main_router =  APIRouter(tags=["Main"])
 ############################## BIRJA API #################################################
 @app_main_router.get("/birja_data/", response_model=dict)
 async def birja_data(crs_code: Optional[str] = None):
-    start = datetime(2024, 11, 1)
+    start = datetime(2024, 9, 1)
     finish = datetime(2024, 11, 30)
     if crs_code:
         url = f"http://10.190.4.38:4040/api/Construction/GetProductsByDate/1/5000/%20/{start.strftime('%Y-%m-%d')}/{finish.strftime('%Y-%m-%d')}/%20/%20"
@@ -41,7 +41,7 @@ async def birja_data(crs_code: Optional[str] = None):
 @app_main_router.get("/soliq_data/", response_model=dict)
 async def soliq_data(mxik_code: Optional[str] = None):
     if mxik_code:
-        url1 = f"https://mspd-api.soliq.uz/minstroy/construction/get-factura-list-by-catalog-code?catalogCode={mxik_code}&fromDate=01.10.2024&toDate=25.11.2024"
+        url1 = f"https://mspd-api.soliq.uz/minstroy/construction/get-factura-list-by-catalog-code?catalogCode={mxik_code}&fromDate=01.10.2024&toDate=29.11.2024"
         
         async with httpx.AsyncClient() as client:
             response1 = await client.get(url1)
