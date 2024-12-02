@@ -10,7 +10,7 @@ REDIRECT_URI = "https://mkinfo.uz/auth/login"
 def login():
     auth_url = (
         f"https://sso.egov.uz/sso/oauth/Authorization.do?"
-        f"response_type=one_code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}"
+        f"response_type=one_code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&scope={CLIENT_ID}&state=OneID"
     )
     return {"auth_url": auth_url}
 
