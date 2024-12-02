@@ -4,6 +4,7 @@ from endpoints.materials import materials_router
 from endpoints.techno import techno_router
 from endpoints.mmechno import mmechano_router
 from endpoints.app_main import app_main_router
+from endpoints.oneid import app_oneid
 from fastapi.middleware.cors import CORSMiddleware
 # Ma'lumotlar bazasini yaratish
 Base.metadata.create_all(bind=engine)
@@ -46,3 +47,4 @@ app.include_router(materials_router)
 app.include_router(techno_router)
 app.include_router(mmechano_router)
 app.include_router(app_main_router)
+app.include_router(app_oneid)
