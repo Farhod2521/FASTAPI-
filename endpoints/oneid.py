@@ -4,7 +4,7 @@ import requests
 app_oneid = APIRouter(tags=["Auth2"])
 CLIENT_ID = "catalog_tmsiti_uz"
 CLIENT_SECRET = "dJQZdRY8SiN0luwd5if9hiTb"
-REDIRECT_URI = "https://mkinfo.uz/auth/login"
+REDIRECT_URI = "https://mkinfo.uz/"
 
 @app_oneid.get("/auth/login")
 def login():
@@ -34,14 +34,20 @@ def callback(code: str):
         raise HTTPException(status_code=400, detail="Access token mavjud emas")
 
     # Foydalanuvchi ma'lumotlarini olish
-    user_info_url = "https://sso.egov.uz/sso/oauth/resource"  # To'g'ri URL'ni tekshiring
-    user_info_response = requests.get(
-        user_info_url,
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
-    if user_info_response.status_code != 200:
-        raise HTTPException(
-            status_code=user_info_response.status_code,
-            detail="Foydalanuvchi ma'lumotlarini olishda xatolik"
-        )
-    return user_info_response.json()
+    token_url = "https://sso.egov.uz/sso/oauth/Authorization.do"
+    token_data = {
+        "grant_type": "one_access_token_identify",  # Parametrni to'g'ri belgilash
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "access_token": access_token,  # Bu token sizga serverdan beriladi
+        "scope": "myportal"  # Scope nomini to'g'ri kiriting
+    }
+    response = requests.post(token_url, data=token_data)
+    
+    # Agar javob muvaffaqiyatsiz bo'lsa, xato qaytarish
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail="Token olishda xatolik yuz berdi")
+
+    # Foydalanuvchi ma'lumotlarini qaytarish
+    return response.json()
+
