@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, DateTime,BigInteger
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, DateTime,BigInteger, Date
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime as dt
@@ -241,3 +241,15 @@ class MatGroups(Base):
     group_category_id = Column(Integer, ForeignKey('material_categories.id'))
 
     category = relationship("MatCategories", backref="groups")
+
+
+
+class OneID(Base):
+    __tablename__ = "oneID"
+    id = Column(Integer, primary_key=True)
+    pin = Column(String(20), nullable=False)
+    user_id = Column(String(255), nullable=False)
+    birth_date = Column(Date, nullable=False)
+    passport_no = Column(String(20))  # NOTO'G'RI
+    birth_place = Column(String(255))
+    full_name = Column(String(255), nullable=False)
