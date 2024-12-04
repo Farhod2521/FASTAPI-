@@ -10,7 +10,7 @@ from database import get_db
 app_oneid = APIRouter(tags=["Auth2"])
 CLIENT_ID = "catalog_tmsiti_uz"
 CLIENT_SECRET = "dJQZdRY8SiN0luwd5if9hiTb"
-REDIRECT_URI = "https://mkinfo.uz/"
+REDIRECT_URI = "https://mkinfo.uz/auth/login/"
 
 @app_oneid.get("/auth/login")
 def login():
