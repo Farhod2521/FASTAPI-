@@ -101,6 +101,6 @@ def callback(code: str, db: Session = Depends(get_db)): # `db` - ma'lumotlar baz
         'pin': user.pin,
         'role': "customer",
     }
-    print(response.data)
+
 
     return response_data
