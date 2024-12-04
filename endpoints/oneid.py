@@ -85,7 +85,7 @@ def callback(code: str, db: Session = Depends(get_db)): # `db` - ma'lumotlar baz
     payload = {
         'id': user.id,
         'full_name': user.full_name,
-        'stir': user.pin,
+        'pin': user.pin,
         'role': "customer",
         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1, minutes=60),
         'iat': datetime.datetime.utcnow()
@@ -98,7 +98,7 @@ def callback(code: str, db: Session = Depends(get_db)): # `db` - ma'lumotlar baz
         'token': token,
         'id': user.id,
         'full_name': user.full_name,
-        'stir': user.pin,
+        'pin': user.pin,
         'role': "customer",
     }
     print(response.data)
