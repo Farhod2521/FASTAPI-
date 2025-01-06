@@ -43,19 +43,26 @@ async def soliq_data(mxik_code: Optional[str] = None):
     if mxik_code:
         url1 = f"https://mspd-api.soliq.uz/minstroy/construction/get-factura-list-by-catalog-code?catalogCode={mxik_code}&fromDate=01.10.2024&toDate=29.11.2024"
         
-        async with httpx.AsyncClient() as client:
-            response1 = await client.get(url1)
-        
+        try:
+            async with httpx.AsyncClient() as client:
+                response1 = await client.get(url1)
+        except httpx.ConnectError as e:
+            raise HTTPException(status_code=502, detail={'error': "Connection to the external server failed", 'details': str(e)})
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=502, detail={'error': "Request to the external server failed", 'details': str(e)})
+
         if response1.status_code == 200:
-            data1 = response1.json()
-            return data1
+            try:
+                data1 = response1.json()
+                return data1
+            except ValueError:
+                raise HTTPException(status_code=500, detail={'error': "Invalid JSON response from server"})
         else:
-            error_message = "Serverdan yaroqsiz javob qaytardi"
+            error_message = "Server returned an invalid response"
             raise HTTPException(status_code=response1.status_code, detail={'error': error_message})
     else:
-        error_message = "mxik_code parametri kerak"
+        error_message = "mxik_code parameter is required"
         raise HTTPException(status_code=400, detail={'error': error_message})
-
 ############################################  REGION  KOMPANIY #####
 @app_main_router.get("/monitoring/region_by_filter_company/")
 async def region_by_filter_company(db: Session = Depends(get_db)):
