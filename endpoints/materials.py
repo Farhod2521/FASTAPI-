@@ -199,7 +199,12 @@ async def filter_materials(
 
 
 
-
+def parse_date(date_str: str) -> datetime:
+    """Sanani 'DD.MM.YYYY' formatidan datetime obyektiga aylantiradi."""
+    try:
+        return datetime.strptime(date_str, "%d.%m.%Y")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use DD.MM.YYYY")
 
 from math import ceil
 from sqlalchemy.orm import aliased
@@ -209,10 +214,11 @@ async def filter_materials(
     region_name: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
-    date: Optional[datetime] = None,
     name_value: Optional[str] = None,
     code_value: Optional[str] = None,
     company_name:  Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
     page: int = 1,  # Default to page 1
     page_size: int = 12,  # Default to 12 items per page
     db: Session = Depends(get_db)
@@ -249,8 +255,13 @@ async def filter_materials(
         query = query.filter(MaterialAds.company_name.ilike(f"%{company_name}%"))
     if region_name:
         query = query.join(Regions).filter(Regions.region_name_uz == region_name)
-    if date:
-        query = query.filter(func.date(MaterialAds.material_updated_date) == date)
+
+    if start_date:
+        query = query.filter(func.date(MaterialAds.material_updated_date) >= start_date)
+
+    if end_date:
+        query = query.filter(func.date(MaterialAds.material_updated_date) <= end_date)
+
     if min_price is not None:
         query = query.filter(MaterialAds.material_price >= min_price)
     if max_price is not None:
