@@ -212,6 +212,7 @@ async def filter_materials(
     date: Optional[datetime] = None,
     name_value: Optional[str] = None,
     code_value: Optional[str] = None,
+    company_name:  Optional[str] = None,
     page: int = 1,  # Default to page 1
     page_size: int = 12,  # Default to 12 items per page
     db: Session = Depends(get_db)
@@ -219,7 +220,6 @@ async def filter_materials(
     # Alias for Materials to simplify queries
     MaterialsAlias = aliased(Materials)
 
-    # Base query
     query = (
         db.query(MaterialAds)
         .join(MaterialsAlias, MaterialsAlias.material_csr_code == MaterialAds.material_name_id)
@@ -245,7 +245,8 @@ async def filter_materials(
     else:
         query = query.order_by(MaterialsAlias.material_name)
 
-    # Filter by other parameters
+    if company_name:
+        query = query.filter(MaterialAds.company_name.ilike(f"%{company_name}%"))
     if region_name:
         query = query.join(Regions).filter(Regions.region_name_uz == region_name)
     if date:
