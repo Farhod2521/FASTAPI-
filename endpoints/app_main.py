@@ -21,30 +21,32 @@ import httpx
 async def birja_data():
     start = datetime(2024, 9, 1)
     finish = datetime(2025, 1, 5)
-
     url = f"http://10.190.4.38:4040/api/Construction/GetProductsByDate/1/5000/%20/{start.strftime('%Y-%m-%d')}/{finish.strftime('%Y-%m-%d')}/%20/%20"
     
     try:
-        # Timeoutni o'rnatish (masalan, 10 soniya)
         async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
             response = await client.get(url)
-        
-        if response.status_code == 200:
-            data = response.json()
-            return data
-        else:
-            error_message = "Serverdan yaroqsiz javob qaytardi"
-            raise HTTPException(status_code=response.status_code, detail={'error': error_message})
 
-    except httpx.ConnectTimeout:
-        error_message = "Ulanish uchun vaqt tugadi, server javob bermadi"
-        raise HTTPException(status_code=408, detail={'error': error_message})
+        # Checking for successful response status
+        response.raise_for_status()
 
-    except httpx.RequestError as e:
-        error_message = f"Xatolik yuz berdi: {str(e)}"
+        data = response.json()
+        return data
+
+    except httpx.HTTPStatusError as http_err:
+        # Handles non-200 status codes (e.g., 404, 500)
+        error_message = f"Serverdan yaroqsiz javob qaytardi: {http_err}"
+        raise HTTPException(status_code=http_err.response.status_code, detail={'error': error_message})
+
+    except httpx.RequestError as req_err:
+        # Handles connection errors or timeout
+        error_message = f"Xatolik yuz berdi: {str(req_err)}"
         raise HTTPException(status_code=500, detail={'error': error_message})
 
-
+    except Exception as err:
+        # General error handler
+        error_message = f"Ishlashda xatolik yuz berdi: {str(err)}"
+        raise HTTPException(status_code=500, detail={'error': error_message})
 
 
 
