@@ -15,22 +15,34 @@ import httpx
 app_main_router =  APIRouter(tags=["Main"])
 
 ########################### BIRJA API XLSX #############################################
+import httpx
+
 @app_main_router.get("/birja_xlsx/", response_model=dict)
 async def birja_data():
     start = datetime(2024, 9, 1)
     finish = datetime(2025, 1, 5)
-   
+
     url = f"http://10.190.4.38:4040/api/Construction/GetProductsByDate/1/5000/%20/{start.strftime('%Y-%m-%d')}/{finish.strftime('%Y-%m-%d')}/%20/%20"
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
-        
-    if response.status_code == 200:
-        data = response.json()
     
-        return data
-    else:
-        error_message = "Serverdan yaroqsiz javob qaytardi"
-        raise HTTPException(status_code=response.status_code, detail={'error': error_message})
+    try:
+        # Timeoutni o'rnatish (masalan, 10 soniya)
+        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
+            response = await client.get(url)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        else:
+            error_message = "Serverdan yaroqsiz javob qaytardi"
+            raise HTTPException(status_code=response.status_code, detail={'error': error_message})
+
+    except httpx.ConnectTimeout:
+        error_message = "Ulanish uchun vaqt tugadi, server javob bermadi"
+        raise HTTPException(status_code=408, detail={'error': error_message})
+
+    except httpx.RequestError as e:
+        error_message = f"Xatolik yuz berdi: {str(e)}"
+        raise HTTPException(status_code=500, detail={'error': error_message})
 
 
 
