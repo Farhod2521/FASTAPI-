@@ -21,7 +21,7 @@ import httpx
 async def birja_data():
     start = datetime(2024, 9, 1)
     finish = datetime(2025, 1, 5)
-    url = f"http://10.190.4.38:4040/api/Construction/GetProductsByDate/1/500000/%20/{start.strftime('%Y-%m-%d')}/{finish.strftime('%Y-%m-%d')}/%20/%20"
+    url = f"http://10.190.4.38:4040/api/Construction/GetProductsByDate/1/50000000/%20/{start.strftime('%Y-%m-%d')}/{finish.strftime('%Y-%m-%d')}/%20/%20"
     
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
