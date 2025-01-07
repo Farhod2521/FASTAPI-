@@ -21,22 +21,25 @@ import httpx
 async def birja_data():
     start = datetime(2024, 9, 1)
     finish = datetime(2025, 1, 5)
-    url = f"http://10.190.4.38:4040/api/Construction/GetProductsByDate/1/5000/%20/{start.strftime('%Y-%m-%d')}/{finish.strftime('%Y-%m-%d')}/%20/%20"
+    url = f"http://10.190.4.38:4040/api/Construction/GetProductsByDate/1/50000/%20/{start.strftime('%Y-%m-%d')}/{finish.strftime('%Y-%m-%d')}/%20/%20"
     
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
+        async with httpx.AsyncClient() as client:
             response = await client.get(url)
-
-        # Checking for successful response status
-        response.raise_for_status()
-
-        data = response.json()
-        return data
-
-    except httpx.HTTPStatusError as http_err:
-        # Handles non-200 status codes (e.g., 404, 500)
-        error_message = f"Serverdan yaroqsiz javob qaytardi: {http_err}"
-        raise HTTPException(status_code=http_err.response.status_code, detail={'error': error_message})
+        
+        # Check if the status code is 200 (success)
+        if response.status_code == 200:
+            try:
+                data = response.json()  # Parse the JSON only once
+            except ValueError as json_err:
+                # Handles invalid JSON response
+                error_message = f"Javobda yaroqsiz JSON format mavjud: {str(json_err)}"
+                raise HTTPException(status_code=500, detail={'error': error_message})
+            return data
+        else:
+            # If the status code is not 200, raise an exception
+            error_message = f"Serverdan yaroqsiz javob qaytardi: {response.status_code}"
+            raise HTTPException(status_code=response.status_code, detail={'error': error_message})
 
     except httpx.RequestError as req_err:
         # Handles connection errors or timeout
@@ -47,6 +50,7 @@ async def birja_data():
         # General error handler
         error_message = f"Ishlashda xatolik yuz berdi: {str(err)}"
         raise HTTPException(status_code=500, detail={'error': error_message})
+
 
 
 
