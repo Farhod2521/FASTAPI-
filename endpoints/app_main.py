@@ -54,7 +54,27 @@ async def soliq_data(mxik_code: Optional[str] = None):
         if response1.status_code == 200:
             try:
                 data1 = response1.json()
-                return data1
+                if data1.get("success") and data1.get("data"):
+                    data = data1["data"]
+                    
+                    # delivery_sum / product_count hisoblash
+                    ratios = [d["delivery_sum"] / d["product_count"] for d in data if d["product_count"] > 0]
+
+                    # max, min va o'rtacha qiymatlarni hisoblash
+                    max_sum = max(ratios)
+                    min_sum = min(ratios)
+                    midle_sum = sum(ratios) / len(ratios) if ratios else 0
+
+                    return {
+                        "success": True,
+                        "reason": "success",
+                        "max_sum": max_sum,
+                        "min_sum": min_sum,
+                        "midle_sum": midle_sum,
+                        "data": data
+                    }
+                else:
+                    raise HTTPException(status_code=404, detail={'error': "No data found for the given mxik_code"})
             except ValueError:
                 raise HTTPException(status_code=500, detail={'error': "Invalid JSON response from server"})
         else:
@@ -63,6 +83,7 @@ async def soliq_data(mxik_code: Optional[str] = None):
     else:
         error_message = "mxik_code parameter is required"
         raise HTTPException(status_code=400, detail={'error': error_message})
+
 ############################################  REGION  KOMPANIY #####
 @app_main_router.get("/monitoring/region_by_filter_company/")
 async def region_by_filter_company(db: Session = Depends(get_db)):
