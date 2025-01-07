@@ -91,24 +91,46 @@ async def soliq_data(db: Session = Depends(get_db)):
 async def birja_data(crs_code: Optional[str] = None):
     start = datetime(2024, 9, 1)
     finish = datetime(2025, 1, 5)
+
     if crs_code:
         url = f"http://10.190.4.38:4040/api/Construction/GetProductsByDate/1/5000/%20/{start.strftime('%Y-%m-%d')}/{finish.strftime('%Y-%m-%d')}/%20/%20"
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
-        
+
         if response.status_code == 200:
             data = response.json()
+            
             # Filtrlash
             filtered_data = [
                 item for item in data if item.get("constructioncode") == crs_code
             ]
-            return {"filtered_data": filtered_data}
+
+            if not filtered_data:
+                return {"error": "Mos keladigan ma'lumotlar topilmadi."}
+
+            # Narxlar ro'yxatini olish
+            prices = [item["price"] for item in filtered_data if "price" in item]
+
+            if not prices:
+                return {"error": "Narx ma'lumotlari mavjud emas."}
+
+            # Hisoblash
+            max_sum = max(prices)
+            min_sum = min(prices)
+            middle_sum = sum(prices) / len(prices)
+
+            return {
+                "max_sum": max_sum,
+                "min_sum": min_sum,
+                "middle_sum": middle_sum,
+                "filtered_data": filtered_data
+            }
         else:
             error_message = "Serverdan yaroqsiz javob qaytardi"
-            raise HTTPException(status_code=response.status_code, detail={'error': error_message})
+            raise HTTPException(status_code=response.status_code, detail={"error": error_message})
     else:
         error_message = "crs_code parametri kerak"
-        raise HTTPException(status_code=400, detail={'error': error_message})
+        raise HTTPException(status_code=400, detail={"error": error_message})
 ###############################   SOLIQ API   #############################################
 @app_main_router.get("/soliq_data/", response_model=dict)
 async def soliq_data(mxik_code: Optional[str] = None):
