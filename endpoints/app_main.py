@@ -35,7 +35,50 @@ async def birja_data():
         error_message = "Serverdan yaroqsiz javob qaytardi"
         raise HTTPException(status_code=response.status_code, detail={'error': error_message})
 
+########################## SOLIQ API XLSX ################################################
+import requests
+@app_main_router.get("/soliq_xlsx/")
+async def soliq_data(session: Session):
+    mxik_count = 0
+    
+    # Fetch all Materials
+    materials = session.query(Materials).all()
+    
+    # For each material, post the `material_csr_code` to the first API
+    for material in materials:
+        payload = [material.material_csr_code]
+        url = "https://tasnif.soliq.uz/api/cl-api/integration-kcm/kcm"
+        
+        try:
+            response = requests.post(url, json=payload)
+            response_data = response.json()
 
+            mxik_soliq_data = None
+            if response_data.get("success") and response_data.get("data"):
+                mxikCode = response_data["data"][0].get(material.material_csr_code, {}).get("mxikCode")
+                
+                if mxikCode:
+                    mxik_code = mxikCode  # Update mxik_code
+                    
+                    # Now fetch the factura list from the second API
+                    url1 = f"https://mspd-api.soliq.uz/minstroy/construction/get-factura-list-by-catalog-code?catalogCode={mxik_code}&fromDate=01.10.2024&toDate=31.12.2024"
+                    
+                    try:
+                        async with httpx.AsyncClient() as client:
+                            response1 = await client.get(url1)
+                        
+                        if response1.status_code == 200:
+                            data1 = response1.json()
+                            if data1.get("success") and data1.get("data"):
+                                data = data1["data"]
+                                # Count data for the current mxik_code
+                                mxik_count += len(data)
+                    except httpx.RequestError as e:
+                        raise HTTPException(status_code=502, detail={'error': "Request to the external server failed", 'details': str(e)})
+        except requests.RequestException as e:
+            raise HTTPException(status_code=502, detail={'error': "Request to the first external server failed", 'details': str(e)})
+    
+    return {"mxik_count": mxik_count}
 
 
 
