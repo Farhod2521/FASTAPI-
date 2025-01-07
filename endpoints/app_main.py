@@ -36,21 +36,23 @@ async def birja_data():
         raise HTTPException(status_code=response.status_code, detail={'error': error_message})
 
 ########################## SOLIQ API XLSX ################################################
-import requests
 @app_main_router.get("/soliq_xlsx/")
 async def soliq_data(db: Session = Depends(get_db)):
     mxik_count = 0
     
-    # Fetch all Materials
+    # Barcha materiallarni olish
     materials = db.query(Materials).all()
     
-    # For each material, post the `material_csr_code` to the first API
+    # Har bir material uchun so'rov yuborish
     for material in materials:
         payload = [material.material_csr_code]
         url = "https://tasnif.soliq.uz/api/cl-api/integration-kcm/kcm"
         
         try:
-            response = requests.post(url, json=payload)
+            # Birinchi APIga so'rov yuborish
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json=payload)
+            
             response_data = response.json()
 
             mxik_soliq_data = None
@@ -58,24 +60,25 @@ async def soliq_data(db: Session = Depends(get_db)):
                 mxikCode = response_data["data"][0].get(material.material_csr_code, {}).get("mxikCode")
                 
                 if mxikCode:
-                    mxik_code = mxikCode  # Update mxik_code
+                    mxik_code = mxikCode  # mxik_code yangilash
                     
-                    # Now fetch the factura list from the second API
+                    # Ikkinchi APIga so'rov yuborish
                     url1 = f"https://mspd-api.soliq.uz/minstroy/construction/get-factura-list-by-catalog-code?catalogCode={mxik_code}&fromDate=01.10.2024&toDate=31.12.2024"
                     
                     try:
-                        async with httpx.AsyncClient() as client:
-                            response1 = await client.get(url1)
+                        # Ikkinchi APIga asinxron so'rov yuborish
+                        async with httpx.AsyncClient() as client1:
+                            response1 = await client1.get(url1)
                         
                         if response1.status_code == 200:
                             data1 = response1.json()
                             if data1.get("success") and data1.get("data"):
                                 data = data1["data"]
-                                # Count data for the current mxik_code
+                                # mxik_code bo'yicha data sonini hisoblash
                                 mxik_count += len(data)
                     except httpx.RequestError as e:
                         raise HTTPException(status_code=502, detail={'error': "Request to the external server failed", 'details': str(e)})
-        except requests.RequestException as e:
+        except httpx.RequestError as e:
             raise HTTPException(status_code=502, detail={'error': "Request to the first external server failed", 'details': str(e)})
     
     return {"mxik_count": mxik_count}
