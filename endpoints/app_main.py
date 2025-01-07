@@ -23,34 +23,17 @@ async def birja_data():
     finish = datetime(2025, 1, 5)
     url = f"http://10.190.4.38:4040/api/Construction/GetProductsByDate/1/50000/%20/{start.strftime('%Y-%m-%d')}/{finish.strftime('%Y-%m-%d')}/%20/%20"
     
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url)
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
         
-        # Check if the status code is 200 (success)
-        if response.status_code == 200:
-            try:
-                data = response.json()  # Parse the JSON only once
-            except ValueError as json_err:
-                # Handles invalid JSON response
-                error_message = f"Javobda yaroqsiz JSON format mavjud: {str(json_err)}"
-                raise HTTPException(status_code=500, detail={'error': error_message})
-            return data
-        else:
-            # If the status code is not 200, raise an exception
-            error_message = f"Serverdan yaroqsiz javob qaytardi: {response.status_code}"
-            raise HTTPException(status_code=response.status_code, detail={'error': error_message})
-
-    except httpx.RequestError as req_err:
-        # Handles connection errors or timeout
-        error_message = f"Xatolik yuz berdi: {str(req_err)}"
-        raise HTTPException(status_code=500, detail={'error': error_message})
-
-    except Exception as err:
-        # General error handler
-        error_message = f"Ishlashda xatolik yuz berdi: {str(err)}"
-        raise HTTPException(status_code=500, detail={'error': error_message})
-
+    if response.status_code == 200:
+        data = response.json()
+            # Filtrlash
+      
+        return {"filtered_data": data}
+    else:
+        error_message = "Serverdan yaroqsiz javob qaytardi"
+        raise HTTPException(status_code=response.status_code, detail={'error': error_message})
 
 
 
