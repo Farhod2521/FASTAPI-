@@ -38,11 +38,11 @@ async def birja_data():
 ########################## SOLIQ API XLSX ################################################
 import requests
 @app_main_router.get("/soliq_xlsx/")
-async def soliq_data(session: Session):
+async def soliq_data(db: Session = Depends(get_db)):
     mxik_count = 0
     
     # Fetch all Materials
-    materials = session.query(Materials).all()
+    materials = db.query(Materials).all()
     
     # For each material, post the `material_csr_code` to the first API
     for material in materials:
