@@ -135,7 +135,7 @@ async def birja_data(crs_code: Optional[str] = None):
 @app_main_router.get("/soliq_data/", response_model=dict)
 async def soliq_data(mxik_code: Optional[str] = None):
     if mxik_code:
-        url1 = f"https://mspd-api.soliq.uz/minstroy/construction/get-factura-list-by-catalog-code?catalogCode={mxik_code}&fromDate=01.10.2024&toDate=29.11.2024"
+        url1 = f"https://mspd-api.soliq.uz/minstroy/construction/get-factura-list-by-catalog-code?catalogCode={mxik_code}&fromDate=01.10.2024&toDate=01.02.2025"
         
         try:
             async with httpx.AsyncClient() as client:
